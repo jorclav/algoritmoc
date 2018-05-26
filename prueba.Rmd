@@ -1,0 +1,81 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+###Instalar los paquetes
+```{r}
+install.packages("knitr")
+install.packages("data.table")
+install.packages("caret")
+install.packages("randomForest")
+install.packages("e1071")
+install.packages("pROC")
+install.packages("ROCR")
+library(knitr)
+library(data.table)
+library(caret) 
+library(randomForest)
+library(e1071) 
+library(pROC) 
+library(ROCR)
+```
+###Cargar el dataset
+```{r}
+datos <- fread("/Users/jordiclavijo/proyectos/proyecto/training.csv")
+datos <- data.frame(datos)
+datos <- datos[,-1]
+entrenamiento <- datos[1:100000,] 
+prueba <- datos[100001:150000,] 
+
+```
+###Preprocesamiento de los datos
+```{r}
+##Pasamos a numericos y redondeamos
+datos$DebtRatio=as.numeric(datos$DebtRatio)
+datos$DebtRatio=round(datos$DebtRatio, digits = 5)
+datos$RevolvingUtilizationOfUnsecuredLines=round(datos$RevolvingUtilizationOfUnsecuredLines, digits = 5)
+datos$RevolvingUtilizationOfUnsecuredLines=as.numeric(datos$RevolvingUtilizationOfUnsecuredLines)
+datos$age=as.numeric(datos$age)
+datos$NumberOfTime30.59DaysPastDueNotWorse=as.numeric(datos$NumberOfTime30.59DaysPastDueNotWorse)
+datos$MonthlyIncome=as.numeric(datos$MonthlyIncome)
+datos$NumberOfOpenCreditLinesAndLoans=as.numeric(datos$NumberOfOpenCreditLinesAndLoans)
+datos$NumberOfTimes90DaysLate=as.numeric(datos$NumberOfTimes90DaysLate)
+datos$NumberRealEstateLoansOrLines=as.numeric(datos$NumberRealEstateLoansOrLines)
+datos$NumberOfTime60.89DaysPastDueNotWorse=as.numeric(datos$NumberOfTime60.89DaysPastDueNotWorse)
+datos$NumberOfDependents=as.numeric(datos$NumberOfDependents)
+#Valores que son 96 o 98 se pasan a NA, ya que esta variable es el n˙mero de veces que el prestatario ha estado 30-59 y 60-89 dÌas atrasado
+entrenamiento$NumberOfTime30.59DaysPastDueNotWorse[entrenamiento$NumberOfTime30.59DaysPastDueNotWorse==96] <- NA
+entrenamiento$NumberOfTime30.59DaysPastDueNotWorse[entrenamiento$NumberOfTime30.59DaysPastDueNotWorse==98] <- NA
+entrenamiento$NumberOfTime60.89DaysPastDueNotWorse[entrenamiento$NumberOfTime60.89DaysPastDueNotWorse==96] <- NA
+entrenamiento$NumberOfTime60.89DaysPastDueNotWorse[entrenamiento$NumberOfTime60.89DaysPastDueNotWorse==98] <- NA
+entrenamiento$NumberOfTimes90DaysLate[entrenamiento$NumberOfTimes90DaysLate==96] <- NA
+entrenamiento$NumberOfTimes90DaysLate[entrenamiento$NumberOfTimes90DaysLate==98] <- NA
+#Se pone a 0 los valores que estan como NA para las respectivas variables
+entrenamiento$SeriousDlqin2yrs[is.na(entrenamiento$SeriousDlqin2yrs)] <- 0
+entrenamiento$RevolvingUtilizationOfUnsecuredLines[is.na(entrenamiento$RevolvingUtilizationOfUnsecuredLines)] <- 0
+entrenamiento$age[is.na(entrenamiento$age)] <- 0
+entrenamiento$NumberOfTime30.59DaysPastDueNotWorse[is.na(entrenamiento$NumberOfTime30.59DaysPastDueNotWorse)] <- 0
+entrenamiento$DebtRatio[is.na(entrenamiento$DebtRatio)] <- 0
+entrenamiento$NumberOfOpenCreditLinesAndLoans[is.na(entrenamiento$NumberOfOpenCreditLinesAndLoans)] <- 0
+entrenamiento$NumberOfTimes90DaysLate[is.na(entrenamiento$NumberOfTimes90DaysLate)] <- 0
+
+entrenamiento$NumberRealEstateLoansOrLines[is.na(entrenamiento$NumberRealEstateLoansOrLines)] <- 0
+entrenamiento$NumberOfTime60.89DaysPastDueNotWorse[is.na(entrenamiento$NumberOfTime60.89DaysPastDueNotWorse)] <- 0
+
+entrenamiento$NumberOfDependents[is.na(entrenamiento$NumberOfDependents)] <- 0
+entrenamiento$MonthlyIncome[is.na(entrenamiento$MonthlyIncome)] <- 0
+
+#### esto  es para cambiar los NA's por ceros
+entrenamiento[is.na(entrenamiento)] <- 0
+```
+###Random Forest
+```{r}
+RF <- randomForest(entrenamiento[,-c(1,2,7,12)],entrenamiento$SeriousDlqin2yrs,do.trace=TRUE,ntree = 100,mtry = 2 ,importance = TRUE)
+pred <- predict(RF,entrenamiento[,-c(1,2,7,12)])
+plot(RF)
+
+###grafico
+modelo1<-party::ctree(formula=SeriousDlqin2yrs~MonthlyIncome,data = entrenamiento)
+plot(modelo1)
+```
